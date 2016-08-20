@@ -98,7 +98,7 @@ describe Xmldsig::Signature do
     end
   end
 
-  ["sha1", "sha256", "sha384", "sha512"].each do |algorithm|
+  ["sha1", "sha256", "sha384", "sha512", "gostr3411"].each do |algorithm|
     describe "sign method #{algorithm}" do
       let(:document) { Nokogiri::XML::Document.parse File.read("spec/fixtures/unsigned-#{algorithm}.xml") }
       let(:signature_node) { document.at_xpath("//ds:Signature", Xmldsig::NAMESPACES) }
@@ -106,13 +106,17 @@ describe Xmldsig::Signature do
 
       it "uses the correct signature algorithm" do
         signature.sign do |data, signature_algorithm|
+          openssl_algorithm = algorithm
           case algorithm
           when "sha1"
             signature_algorithm.should == "http://www.w3.org/2000/09/xmldsig#rsa-#{algorithm}"
+          when "gostr3411"
+            signature_algorithm.should == "http://www.w3.org/2001/04/xmldsig-more#gostr34102001-#{algorithm}"
+            openssl_algorithm = 'md_gost94'
           else
             signature_algorithm.should == "http://www.w3.org/2001/04/xmldsig-more#rsa-#{algorithm}"
           end
-          private_key.sign(OpenSSL::Digest.new(algorithm).new, data)
+          private_key.sign(OpenSSL::Digest.new(openssl_algorithm).new, data)
         end
       end
     end

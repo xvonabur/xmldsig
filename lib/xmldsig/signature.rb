@@ -59,7 +59,7 @@ module Xmldsig
 
     def calculate_signature_value(private_key, &block)
       if private_key
-        private_key.sign(signature_method.new, canonicalized_signed_info)
+        private_key.sign(signature_method, canonicalized_signed_info)
       else
         yield(canonicalized_signed_info, signature_algorithm)
       end
@@ -69,17 +69,27 @@ module Xmldsig
       signed_info.at_xpath("descendant::ds:SignatureMethod", NAMESPACES).get_attribute("Algorithm")
     end
 
+    def other_signature_methods
+      algorithm = signature_algorithm && signature_algorithm =~ /gostr(.*?)$/i && $1.to_i
+      case algorithm
+        when 3411
+          OpenSSL::Digest.new('md_gost94')
+        else
+          OpenSSL::Digest::SHA1.new
+      end
+    end
+
     def signature_method
       algorithm = signature_algorithm && signature_algorithm =~ /sha(.*?)$/i && $1.to_i
       case algorithm
         when 512
-          OpenSSL::Digest::SHA512
+          OpenSSL::Digest::SHA512.new
         when 384
-          OpenSSL::Digest::SHA384
+          OpenSSL::Digest::SHA384.new
         when 256 then
-          OpenSSL::Digest::SHA256
+          OpenSSL::Digest::SHA256.new
         else
-          OpenSSL::Digest::SHA1
+          other_signature_methods
       end
     end
 
@@ -100,7 +110,7 @@ module Xmldsig
 
     def validate_signature_value(certificate)
       signature_valid = if certificate
-        certificate.public_key.verify(signature_method.new, signature_value, canonicalized_signed_info)
+        certificate.public_key.verify(signature_method, signature_value, canonicalized_signed_info)
       else
         yield(signature_value, canonicalized_signed_info, signature_algorithm)
       end

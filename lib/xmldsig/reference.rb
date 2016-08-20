@@ -64,6 +64,8 @@ module Xmldsig
           Digest::SHA256
         when "http://www.w3.org/2000/09/xmldsig#sha1"
           Digest::SHA1
+        when "http://www.w3.org/2001/04/xmldsig-more#gostr3411"
+          OpenSSL::Digest.new('md_gost94')
       end
     end
 
